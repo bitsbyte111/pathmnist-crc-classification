@@ -1,4 +1,4 @@
-# CRC-TissueNet
+# Colorectal-Cancer-Multi-Class-Tissue-Classification
 
 **Benchmarking CNNs, vision transformers and MLP models for colorectal cancer tissue classification in H&E histopathology (PathMNIST)**
 
