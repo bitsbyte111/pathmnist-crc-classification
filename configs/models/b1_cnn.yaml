@@ -1,0 +1,18 @@
+# B1 - small CNN as specified in the proposal (3 blocks, 32-64-128 filters, ~0.1 M params).
+# This is also the starting point ("incumbent") of the CNN ablation.
+_base_: ../default.yaml
+experiment: {name: B1_cnn}
+model:
+  name: simple_cnn
+  params:
+    base_channels: 32
+    depth: 3
+    kernel_size: 3
+    convs_per_block: 1
+    activation: relu
+    batch_norm: true
+    pooling: max
+    head: gap
+    dropout: 0.25
+    init: kaiming
+train: {epochs: 50, batch_size: 128, optimizer: adamw, lr: 1.0e-3, weight_decay: 1.0e-4}

@@ -1,0 +1,7 @@
+# Transformers / MLP-Mixer: lower LR, layer-wise LR decay, stochastic depth.
+_base_: pretrained_base.yaml
+model:
+  params: {drop_rate: 0.0, drop_path_rate: 0.1}
+train:
+  lr: 5.0e-5
+  finetune: {strategy: full, layer_decay: 0.75}

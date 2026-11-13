@@ -1,0 +1,4 @@
+# P3 - Compound-scaled CNN (5.3 M)
+_base_: pretrained_base.yaml
+experiment: {name: P3_efficientnet_b0}
+model: {name: efficientnet_b0}

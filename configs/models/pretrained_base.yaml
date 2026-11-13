@@ -1,0 +1,21 @@
+# Shared settings for ImageNet-pretrained models (proposal Table 13).
+_base_: ../default.yaml
+data:
+  size: 224               # needs ~14 GB disk; streamed from a memory map (low RAM).
+  num_workers: 2          # Colab: 2 CPUs. Kaggle: 4.
+model:
+  normalization: model    # use the mean/std the pretrained weights expect
+  pretrained: true
+  params: {drop_rate: 0.1}
+augment: {enabled: true, flips: true, rot90: true, color_jitter: 0.05}
+train:
+  epochs: 15
+  batch_size: 64
+  optimizer: adamw
+  lr: 1.0e-4
+  weight_decay: 0.05
+  scheduler: cosine
+  warmup_epochs: 1
+  label_smoothing: 0.1
+  early_stopping_patience: 4
+  save_checkpoint: last   # resume after a disconnect

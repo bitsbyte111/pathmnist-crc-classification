@@ -1,0 +1,7 @@
+# B0 - multilayer perceptron on flattened 28x28 pixels (no spatial inductive bias)
+_base_: ../default.yaml
+experiment: {name: B0_mlp}
+model:
+  name: mlp
+  params: {hidden: [512, 128], activation: relu, dropout: 0.2, batch_norm: false, init: kaiming}
+train: {epochs: 50, batch_size: 128, optimizer: adamw, lr: 1.0e-3}

@@ -1,0 +1,4 @@
+# P6 - Hierarchical shifted-window transformer (28.3 M)
+_base_: transformer_base.yaml
+experiment: {name: P6_swin_tiny}
+model: {name: swin_tiny}

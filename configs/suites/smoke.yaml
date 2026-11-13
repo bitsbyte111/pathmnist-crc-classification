@@ -1,0 +1,16 @@
+# CI smoke test on synthetic data (no download, CPU, ~1 minute).
+name: smoke
+seeds: [0, 1]
+reference: cnn
+common_overrides:
+  data.synthetic: true
+  data.synthetic_samples: 256
+  train.epochs: 2
+  train.warmup_epochs: 0
+  eval.test: true
+  eval.bootstrap: 50
+  experiment.device: cpu
+runs:
+  - {id: mlp, config: ../models/b0_mlp.yaml}
+  - {id: cnn, config: ../models/b1_cnn.yaml}
+  - {id: timm_resnet18, config: ../models/pretrained_base.yaml, overrides: {model.name: resnet18, model.pretrained: false, model.input_size: 32, data.size: 28, train.batch_size: 64}}

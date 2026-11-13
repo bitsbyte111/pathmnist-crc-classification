@@ -1,0 +1,181 @@
+# Staged one-factor-at-a-time ablation of the from-scratch CNN (B1) at 28 px.
+# Each stage varies ONE factor; the winner (best mean validation macro F1) is carried forward.
+# Candidates are overrides on top of the current incumbent. `__scale__` multiplies the
+# incumbent's value (used for learning rates, which depend on the chosen optimiser).
+# Test data are never used here. Run: python scripts/run_ablation.py --plan configs/ablation/cnn_ablation.yaml
+
+name: cnn_ablation
+title: CNN hyperparameter study (from scratch, 28 px)
+best_config_out: configs/models/b1_cnn_tuned.yaml
+base: ../models/b1_cnn.yaml
+selection_metric: val_macro_f1
+seeds: [42]                    # use [42, 43] if GPU time allows; ties are common at this scale
+common_overrides:
+  train.epochs: 20
+  train.early_stopping_patience: 5
+  train.save_checkpoint: none
+  eval.save_predictions: false
+final_overrides:               # applied to the winning config written to configs/models/b1_cnn_tuned.yaml
+  train.epochs: 50
+  train.early_stopping_patience: 10
+
+stages:
+  # ---------------------------------------------------------------- optimisation
+  - name: optimizer
+    concept: Gradient-descent variants. Plain SGD vs momentum/Nesterov vs adaptive methods; each with a sensible default LR.
+    expect: "Adaptive methods (Adam, AdamW, RMSprop, NAdam) converge fastest within 20 epochs; momentum/Nesterov SGD catch up; plain SGD and Adagrad lag."
+    candidates:
+      sgd:      {train.optimizer: sgd,      train.lr: 0.05}
+      momentum: {train.optimizer: momentum, train.lr: 0.01}
+      nesterov: {train.optimizer: nesterov, train.lr: 0.01}
+      adagrad:  {train.optimizer: adagrad,  train.lr: 0.01}
+      adadelta: {train.optimizer: adadelta, train.lr: 1.0}
+      rmsprop:  {train.optimizer: rmsprop,  train.lr: 0.001}
+      adam:     {train.optimizer: adam,     train.lr: 0.001}
+      adamw:    {train.optimizer: adamw,    train.lr: 0.001}
+      nadam:    {train.optimizer: nadam,    train.lr: 0.001}
+
+  - name: learning_rate
+    concept: Step size. Too small converges slowly; too large oscillates or diverges.
+    expect: "An inverted U: x0.1 under-trains in the epoch budget, x10 oscillates or diverges, the optimum is near x1-x3."
+    candidates:
+      x0.1: {__scale__: {train.lr: 0.1}}
+      x0.3: {__scale__: {train.lr: 0.3}}
+      x1:   {}
+      x3:   {__scale__: {train.lr: 3.0}}
+      x10:  {__scale__: {train.lr: 10.0}}
+
+  - name: batch_size
+    concept: Mini-batch size. Small batches = noisier gradients (implicit regularisation), more updates per epoch.
+    expect: "Smaller batches give more updates per epoch and slightly better generalisation at a fixed learning rate; 512 is fastest per epoch but weakest."
+    candidates:
+      "32":  {train.batch_size: 32}
+      "64":  {train.batch_size: 64}
+      "128": {train.batch_size: 128}
+      "256": {train.batch_size: 256}
+      "512": {train.batch_size: 512}
+
+  - name: lr_schedule
+    concept: Learning-rate schedule. Constant vs step decay vs cosine annealing (with 1 warm-up epoch).
+    expect: "Cosine or step decay beat a constant learning rate by settling into a sharper minimum in the last epochs."
+    candidates:
+      constant: {train.scheduler: none}
+      step:     {train.scheduler: step}
+      cosine:   {train.scheduler: cosine}
+
+  # ---------------------------------------------------------------- architecture
+  - name: activation
+    concept: Non-linearity. Saturating sigmoid/tanh cause vanishing gradients (see first-layer gradient norm); ReLU family does not.
+    expect: "ReLU-family and smooth activations (GELU, SiLU, Mish) perform similarly; sigmoid is clearly worse with a much smaller first-layer gradient (vanishing gradient); tanh in between."
+    candidates:
+      relu:       {model.params.activation: relu}
+      leaky_relu: {model.params.activation: leaky_relu}
+      elu:        {model.params.activation: elu}
+      gelu:       {model.params.activation: gelu}
+      silu:       {model.params.activation: silu}
+      mish:       {model.params.activation: mish}
+      tanh:       {model.params.activation: tanh}
+      sigmoid:    {model.params.activation: sigmoid}
+
+  - name: initialization
+    concept: Weight initialisation. He (Kaiming) for ReLU-type, Xavier for tanh/sigmoid, naive N(0, 0.01) for contrast.
+    expect: "With batch norm the differences are small; the naive N(0, 0.01) start converges more slowly."
+    candidates:
+      kaiming:       {model.params.init: kaiming}
+      xavier:        {model.params.init: xavier}
+      normal_0.01:   {model.params.init: normal}
+      pytorch_default: {model.params.init: default}
+
+  - name: kernel_size
+    concept: Filter (kernel) size and receptive field. Larger filters see more context but add parameters.
+    expect: "5x5 may help slightly by covering more context, at about 2.8x the parameters; 7x7 adds cost with diminishing returns at 28 px."
+    candidates:
+      "3x3": {model.params.kernel_size: 3}
+      "5x5": {model.params.kernel_size: 5}
+      "7x7": {model.params.kernel_size: 7}
+
+  - name: width
+    concept: Number of filters (base channels, doubled per block). Capacity vs over-fitting and cost.
+    expect: "Wider networks improve F1 with diminishing returns; parameters grow roughly 4x per doubling of width."
+    candidates:
+      "16-32-64":   {model.params.base_channels: 16}
+      "32-64-128":  {model.params.base_channels: 32}
+      "64-128-256": {model.params.base_channels: 64}
+
+  - name: depth
+    concept: Number of conv blocks. Each block halves resolution and grows the receptive field (28 -> 14 -> 7 -> 3 -> 1).
+    expect: "3-4 blocks beat 2 because the receptive field must cover the tissue texture; at 28 px a 4th block works on 3x3 maps, so gains are small."
+    candidates:
+      "2_blocks": {model.params.depth: 2}
+      "3_blocks": {model.params.depth: 3}
+      "4_blocks": {model.params.depth: 4}
+
+  - name: convs_per_block
+    concept: Stacking two small convolutions gives a larger receptive field with an extra non-linearity (VGG idea).
+    expect: "Two convolutions per block add depth and non-linearity and should help modestly."
+    candidates:
+      "1_conv": {model.params.convs_per_block: 1}
+      "2_conv": {model.params.convs_per_block: 2}
+
+  - name: downsampling
+    concept: Max pooling vs average pooling vs learned strided convolution.
+    expect: "Max pooling suits nuclei/edge detection; strided convolution is competitive; average pooling slightly weaker."
+    candidates:
+      max_pool: {model.params.pooling: max}
+      avg_pool: {model.params.pooling: avg}
+      strided:  {model.params.pooling: stride}
+
+  - name: classifier_head
+    concept: Global average pooling (few parameters, translation-invariant) vs flatten + dense layer.
+    expect: "Global average pooling generalises as well or better with far fewer parameters than flatten + dense."
+    candidates:
+      global_avg_pool: {model.params.head: gap}
+      flatten_dense:   {model.params.head: flatten}
+
+  # ---------------------------------------------------------------- regularisation
+  - name: batch_norm
+    concept: Batch normalisation stabilises activations and permits higher learning rates.
+    expect: "Removing batch norm slows convergence and may destabilise training at the learning rate tuned with it."
+    candidates:
+      with_bn:    {model.params.batch_norm: true}
+      without_bn: {model.params.batch_norm: false}
+
+  - name: dropout
+    concept: Dropout before the classifier randomly removes units to reduce co-adaptation.
+    expect: "Small effect with ~90k training patches and a small model; 0.5 may under-fit."
+    candidates:
+      "0.0":  {model.params.dropout: 0.0}
+      "0.25": {model.params.dropout: 0.25}
+      "0.5":  {model.params.dropout: 0.5}
+
+  - name: weight_decay
+    concept: L2 / decoupled weight decay penalises large weights.
+    expect: "A small decay (1e-4 to 5e-4) helps slightly; 1e-3 may under-fit."
+    candidates:
+      "0":    {train.weight_decay: 0.0}
+      "1e-4": {train.weight_decay: 1.0e-4}
+      "5e-4": {train.weight_decay: 5.0e-4}
+      "1e-3": {train.weight_decay: 1.0e-3}
+
+  - name: augmentation
+    concept: Data augmentation. Geometric (flips/rotations) and colour/H&E-stain jitter for robustness to new patients and labs.
+    expect: "Geometric augmentation helps; colour/H&E jitter may not help on validation (same slides as training) - its benefit is expected on new patients."
+    candidates:
+      none:          {augment.enabled: false}
+      geometric:     {augment.enabled: true, augment.color_jitter: 0.0, augment.hed_jitter: 0.0}
+      geo_color:     {augment.enabled: true, augment.color_jitter: 0.1, augment.hed_jitter: 0.0}
+      geo_hed_light: {augment.enabled: true, augment.color_jitter: 0.0, augment.hed_jitter: 0.05}
+
+  - name: label_smoothing
+    concept: Label smoothing softens one-hot targets; often improves calibration.
+    expect: "Little change in F1, but a different log-loss (better calibrated confidences)."
+    candidates:
+      "0.0": {train.label_smoothing: 0.0}
+      "0.1": {train.label_smoothing: 0.1}
+
+  - name: class_weighting
+    concept: Weighted cross-entropy for the roughly (not perfectly) balanced classes.
+    expect: "Little effect because classes are roughly balanced; may trade accuracy for balanced accuracy."
+    candidates:
+      unweighted: {train.class_weights: false}
+      weighted:   {train.class_weights: true}

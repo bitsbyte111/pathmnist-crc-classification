@@ -1,0 +1,4 @@
+# P7 - All-MLP patch model (59.9 M)
+_base_: transformer_base.yaml
+experiment: {name: P7_mixer_b16}
+model: {name: mixer_b16}

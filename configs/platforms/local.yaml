@@ -1,0 +1,4 @@
+# Local workstation: data downloaded or copied into ./data
+data.root: data
+data.source_dirs: [data]
+data.num_workers: 4

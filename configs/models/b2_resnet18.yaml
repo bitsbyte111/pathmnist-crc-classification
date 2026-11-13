@@ -1,0 +1,15 @@
+# B2 - ResNet-18 from scratch at 28 px, MedMNIST v2 protocol (published test acc 0.907, AUC 0.983).
+# Reproducing this number validates our pipeline.
+_base_: ../default.yaml
+experiment: {name: B2_resnet18}
+model: {name: resnet18_scratch, pretrained: false}
+augment: {enabled: false}             # MedMNIST v2 baselines used no augmentation
+train:
+  epochs: 100                          # MedMNIST v2: 100 epochs, Adam, lr 1e-3, x0.1 at epochs 50 and 75
+  batch_size: 128
+  optimizer: adam
+  lr: 1.0e-3
+  weight_decay: 0.0
+  scheduler: step
+  warmup_epochs: 0
+  early_stopping_patience: 100

@@ -1,0 +1,19 @@
+# E2 - transfer-learning strategies S1 (linear probe), S2 (partial), S3 (full) -> PO2.
+# Model selection only: evaluated on validation; test kept for E3.
+name: e2_transfer
+seeds: [42]
+reference: P1_resnet50-S3
+common_overrides:
+  eval.test: false
+  train.epochs: 10
+  train.save_checkpoint: last
+runs:
+  - {id: P1_resnet50-S1, config: ../models/p1_resnet50.yaml, overrides: {train.finetune.strategy: linear_probe, train.lr: 1.0e-3, train.weight_decay: 0.0}}
+  - {id: P1_resnet50-S2, config: ../models/p1_resnet50.yaml, overrides: {train.finetune.strategy: partial, train.finetune.trainable_fraction: 0.25}}
+  - {id: P1_resnet50-S3, config: ../models/p1_resnet50.yaml, overrides: {train.finetune.strategy: full}}
+  - {id: P5_deit_small-S1, config: ../models/p5_deit_small.yaml, overrides: {train.finetune.strategy: linear_probe, train.finetune.layer_decay: null, train.lr: 1.0e-3, train.weight_decay: 0.0}}
+  - {id: P5_deit_small-S2, config: ../models/p5_deit_small.yaml, overrides: {train.finetune.strategy: partial, train.finetune.layer_decay: null, train.lr: 1.0e-4}}
+  - {id: P5_deit_small-S3, config: ../models/p5_deit_small.yaml, overrides: {train.finetune.strategy: full}}
+  - {id: P7_mixer_b16-S1, config: ../models/p7_mixer_b16.yaml, overrides: {train.finetune.strategy: linear_probe, train.finetune.layer_decay: null, train.lr: 1.0e-3, train.weight_decay: 0.0}}
+  - {id: P7_mixer_b16-S2, config: ../models/p7_mixer_b16.yaml, overrides: {train.finetune.strategy: partial, train.finetune.layer_decay: null, train.lr: 1.0e-4}}
+  - {id: P7_mixer_b16-S3, config: ../models/p7_mixer_b16.yaml, overrides: {train.finetune.strategy: full}}

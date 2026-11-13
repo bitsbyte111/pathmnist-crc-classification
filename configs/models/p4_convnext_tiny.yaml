@@ -1,0 +1,4 @@
+# P4 - Modernised CNN (28.6 M)
+_base_: pretrained_base.yaml
+experiment: {name: P4_convnext_tiny}
+model: {name: convnext_tiny, params: {drop_rate: 0.0, drop_path_rate: 0.1}}

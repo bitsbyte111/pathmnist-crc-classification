@@ -1,0 +1,4 @@
+# Google Colab (1 GPU, 2 vCPUs, ~12 GB RAM). Data cached on Drive via the notebook's symlink.
+data.root: data
+data.download: true
+data.num_workers: 2

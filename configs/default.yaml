@@ -1,0 +1,62 @@
+# Global defaults. Every other config inherits from this file via `_base_`.
+experiment:
+  name: default
+  output_dir: runs
+  seed: 42
+  deterministic: true
+  device: auto            # auto | cuda | cpu | mps
+
+data:
+  root: data              # writable: converted memory-maps and stats are cached here
+  source_dirs: []         # read-only places to search for your own PathMNIST files (e.g. /kaggle/input)
+  size: 28                # 28 | 64 | 128 | 224 (MedMNIST v2 / MedMNIST+)
+  download: true
+  in_memory: auto         # auto = load into RAM when size <= 64, else memory-map from disk
+  num_workers: 2
+  eval_batch_size: 512
+  subset_fraction: 1.0    # <1 trains on a stratified fraction of the TRAINING split (val/test stay complete)
+  synthetic: false        # tiny fake dataset for tests / CI
+  synthetic_samples: 512
+
+augment:                  # training split only
+  enabled: true
+  flips: true
+  rot90: true
+  color_jitter: 0.0
+  hed_jitter: 0.0         # H&E stain augmentation strength (Tellez et al. 2019); 0.05 light, 0.2 strong
+
+model:
+  name: simple_cnn
+  input_size: null        # null = feed images at data.size; pretrained models use their native size
+  normalization: dataset  # dataset (train-split stats) | imagenet | model (timm pretrained_cfg)
+  pretrained: true
+  weights_file: null      # local pretrained weights (offline); null = download from the HF Hub
+  params: {}
+
+train:
+  epochs: 30
+  batch_size: 128
+  optimizer: adamw        # sgd | momentum | nesterov | adagrad | adadelta | rmsprop | adam | adamw | nadam | radam
+  lr: 1.0e-3
+  momentum: 0.9
+  weight_decay: 1.0e-4
+  scheduler: cosine       # none | cosine | step
+  warmup_epochs: 1
+  label_smoothing: 0.0
+  class_weights: false
+  grad_clip: null
+  amp: true               # mixed precision on CUDA
+  data_parallel: false    # split batches over all GPUs (single big run); prefer --gpus for many runs
+  early_stopping_patience: 8
+  monitor: val_macro_f1   # model selection uses validation macro F1 (never the test set)
+  save_checkpoint: best   # best | last (also enables resume) | none
+  resume: true
+  finetune:
+    strategy: full        # linear_probe | partial | full (pretrained models only)
+    trainable_fraction: 0.25
+    layer_decay: null     # e.g. 0.75 for layer-wise LR decay
+
+eval:
+  test: false             # the test set is used only for final runs (suites), never for selection
+  bootstrap: 1000
+  save_predictions: true

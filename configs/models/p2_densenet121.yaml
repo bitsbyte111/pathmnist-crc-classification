@@ -1,0 +1,4 @@
+# P2 - Densely connected CNN (8.0 M)
+_base_: pretrained_base.yaml
+experiment: {name: P2_densenet121}
+model: {name: densenet121}

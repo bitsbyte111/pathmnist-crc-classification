@@ -1,0 +1,4 @@
+# P1 - ImageNet-pretrained residual CNN (25.6 M)
+_base_: pretrained_base.yaml
+experiment: {name: P1_resnet50}
+model: {name: resnet50}

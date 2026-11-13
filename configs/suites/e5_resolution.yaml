@@ -1,0 +1,16 @@
+# E5 - resolution vs accuracy vs cost (SO1, secondary).
+# CNN: fed at native resolution (true compute saving). Transformer: images up-sampled to 224
+# (fixed architecture; isolates the information content of the image).
+name: e5_resolution
+seeds: [42]
+reference: resnet50_224
+common_overrides: {eval.test: true}
+runs:
+  - {id: resnet50_28,  config: ../models/p1_resnet50.yaml, overrides: {data.size: 28,  model.input_size: 28}}
+  - {id: resnet50_64,  config: ../models/p1_resnet50.yaml, overrides: {data.size: 64,  model.input_size: 64}}
+  - {id: resnet50_128, config: ../models/p1_resnet50.yaml, overrides: {data.size: 128, model.input_size: 128}}
+  - {id: resnet50_224, config: ../models/p1_resnet50.yaml, overrides: {data.size: 224, model.input_size: 224}}
+  - {id: deit_small_28,  config: ../models/p5_deit_small.yaml, overrides: {data.size: 28}}
+  - {id: deit_small_64,  config: ../models/p5_deit_small.yaml, overrides: {data.size: 64}}
+  - {id: deit_small_128, config: ../models/p5_deit_small.yaml, overrides: {data.size: 128}}
+  - {id: deit_small_224, config: ../models/p5_deit_small.yaml, overrides: {data.size: 224}}

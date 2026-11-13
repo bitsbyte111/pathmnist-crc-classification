@@ -1,0 +1,11 @@
+# E4 - does colour / H&E-stain augmentation help on new patients (test cohort)? -> PO1
+# Set `config` to the best model from E3 before running (default: ResNet-50).
+name: e4_color_aug
+seeds: [42, 43, 44]
+reference: no_color
+common_overrides: {eval.test: true}
+runs:
+  - {id: no_color,   config: ../models/p1_resnet50.yaml, overrides: {augment.color_jitter: 0.0, augment.hed_jitter: 0.0}}
+  - {id: color,      config: ../models/p1_resnet50.yaml, overrides: {augment.color_jitter: 0.1, augment.hed_jitter: 0.0}}
+  - {id: hed_light,  config: ../models/p1_resnet50.yaml, overrides: {augment.color_jitter: 0.0, augment.hed_jitter: 0.05}}
+  - {id: hed_strong, config: ../models/p1_resnet50.yaml, overrides: {augment.color_jitter: 0.0, augment.hed_jitter: 0.2}}

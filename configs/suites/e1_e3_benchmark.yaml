@@ -1,0 +1,24 @@
+# E1 (pretrained vs scratch) + E3 (architecture families) -> PO1, PO2.
+# Tuned configs (b1_cnn_tuned, p1_resnet50_tuned) are written by the hyperparameter studies;
+# runs whose config does not exist yet are skipped with a warning.
+# Split across teammates' GPU quotas with --only, e.g.  --only P1_resnet50 P2_densenet121
+name: e1_e3_benchmark
+seeds: [42, 43, 44]
+reference: B1_cnn_tuned          # H2a: do pretrained models beat the best scratch CNN?
+common_overrides:
+  eval.test: true
+  eval.bootstrap: 1000
+runs:
+  - {id: B0_mlp,          config: ../models/b0_mlp.yaml}
+  - {id: B1_cnn,          config: ../models/b1_cnn.yaml}            # proposal default
+  - {id: B1_cnn_tuned,    config: ../models/b1_cnn_tuned.yaml}      # ablation winner
+  - {id: B2_resnet18,     config: ../models/b2_resnet18.yaml, seeds: [42]}   # MedMNIST v2 reproduction (100 epochs)
+  - {id: P1_resnet50,     config: ../models/p1_resnet50.yaml}
+  - {id: P1_resnet50_tuned, config: ../models/p1_resnet50_tuned.yaml}   # written by the transfer study (skipped until then)
+  - {id: P2_densenet121,  config: ../models/p2_densenet121.yaml}
+  - {id: P3_efficientnet_b0, config: ../models/p3_efficientnet_b0.yaml}
+  - {id: P4_convnext_tiny,   config: ../models/p4_convnext_tiny.yaml}
+  - {id: P5_deit_small,   config: ../models/p5_deit_small.yaml}
+  - {id: P5_deit_small_tuned, config: ../models/p5_deit_small_tuned.yaml}   # transfer study with --base DeiT (skipped until then)
+  - {id: P6_swin_tiny,    config: ../models/p6_swin_tiny.yaml}
+  - {id: P7_mixer_b16,    config: ../models/p7_mixer_b16.yaml}

@@ -1,0 +1,107 @@
+# Transfer-learning hyperparameter study: ImageNet-pretrained ResNet-50 fine-tuned on PathMNIST (224 px).
+# GPU-heavy - designed for Kaggle "GPU T4 x2" (about 1-2 h with --gpus auto; time your first stage).
+# To keep it affordable each run trains on a stratified 25 % of the training split for 6 epochs;
+# validation always uses the full validation split. Absolute F1 is therefore below a full run,
+# but the comparisons between settings - the point of the study - are like for like.
+# Same model on another architecture:  --base configs/models/p5_deit_small.yaml
+#
+#   python scripts/run_ablation.py --plan configs/ablation/transfer_ablation.yaml --platform kaggle --gpus auto
+
+name: transfer_ablation
+title: Transfer-learning hyperparameter study (ResNet-50, 224 px)
+base: ../models/p1_resnet50.yaml
+best_config_out: configs/models/p1_resnet50_tuned.yaml
+selection_metric: val_macro_f1
+seeds: [42]
+common_overrides:
+  data.subset_fraction: 0.25
+  train.epochs: 6
+  train.warmup_epochs: 1
+  train.early_stopping_patience: 3
+  train.save_checkpoint: none
+  eval.save_predictions: false
+final_overrides:               # the tuned config is written for a full-data run
+  data.subset_fraction: 1.0
+  train.epochs: 15
+  train.early_stopping_patience: 4
+  train.save_checkpoint: last
+
+stages:
+  - name: finetune_strategy
+    concept: How much of the ImageNet network to retrain - head only (linear probe), top quarter (partial), or everything (full).
+    expect: "Full fine-tuning wins because H&E tissue looks nothing like ImageNet photos; a frozen backbone still gives a usable baseline, showing generic features transfer partly."
+    candidates:
+      linear_probe: {train.finetune.strategy: linear_probe, train.lr: 1.0e-3, train.weight_decay: 0.0}
+      partial_25pct: {train.finetune.strategy: partial, train.finetune.trainable_fraction: 0.25}
+      full:          {train.finetune.strategy: full}
+
+  - name: optimizer
+    concept: Adaptive (AdamW) vs momentum SGD for fine-tuning pretrained weights.
+    expect: "Both work; AdamW is less sensitive to the learning rate, SGD with momentum may generalise slightly better when tuned."
+    candidates:
+      adamw:    {train.optimizer: adamw, train.lr: 1.0e-4, train.weight_decay: 0.05}
+      momentum: {train.optimizer: momentum, train.lr: 0.01, train.weight_decay: 1.0e-4}
+      nesterov: {train.optimizer: nesterov, train.lr: 0.01, train.weight_decay: 1.0e-4}
+
+  - name: learning_rate
+    concept: Pretrained weights need much smaller steps than training from scratch; too large a rate destroys the transferred features ("catastrophic forgetting").
+    expect: "An inverted U; the largest rate degrades results visibly in early epochs."
+    candidates:
+      x0.1: {__scale__: {train.lr: 0.1}}
+      x0.3: {__scale__: {train.lr: 0.3}}
+      x1:   {}
+      x3:   {__scale__: {train.lr: 3.0}}
+      x10:  {__scale__: {train.lr: 10.0}}
+
+  - name: batch_size
+    concept: Batch size at 224 px - GPU memory, throughput and gradient noise.
+    expect: "64 and 128 similar in F1; 128 faster per epoch if it fits in 16 GB with mixed precision; 32 slower but sometimes slightly better."
+    candidates:
+      "32":  {train.batch_size: 32}
+      "64":  {train.batch_size: 64}
+      "128": {train.batch_size: 128}
+
+  - name: warmup
+    concept: Linear learning-rate warm-up protects pretrained weights from large, noisy first updates.
+    expect: "Warm-up gives a smoother start (higher F1 after epoch 1) and equal or better final F1."
+    candidates:
+      no_warmup:  {train.warmup_epochs: 0}
+      warmup_1ep: {train.warmup_epochs: 1}
+
+  - name: input_normalization
+    concept: Pretrained weights expect inputs normalised with ImageNet statistics; normalising with PathMNIST's own statistics shifts the input distribution the backbone was trained on.
+    expect: "ImageNet statistics (what the weights expect) work as well or better; with full fine-tuning the network can partly adapt to either."
+    candidates:
+      imagenet_stats: {model.normalization: model}
+      dataset_stats:  {model.normalization: dataset}
+
+  - name: dropout_head
+    concept: Dropout before the new classification layer.
+    expect: "Small effect; strong dropout slows convergence in a 6-epoch budget."
+    candidates:
+      "0.0": {model.params.drop_rate: 0.0}
+      "0.1": {model.params.drop_rate: 0.1}
+      "0.3": {model.params.drop_rate: 0.3}
+
+  - name: weight_decay
+    concept: Decoupled weight decay (AdamW) pulls weights towards zero - and away from the pretrained solution.
+    expect: "Moderate decay (0.01-0.05) is safe; it matters little over 6 epochs."
+    candidates:
+      "0":    {train.weight_decay: 0.0}
+      "0.01": {train.weight_decay: 0.01}
+      "0.05": {train.weight_decay: 0.05}
+
+  - name: augmentation
+    concept: Augmentation for transfer learning - geometric only vs added colour or H&E stain jitter.
+    expect: "Geometric augmentation suffices on validation (same slides as training); stain jitter is aimed at new patients and labs, tested on the test cohort in experiment E4."
+    candidates:
+      geometric:  {augment.color_jitter: 0.0, augment.hed_jitter: 0.0}
+      geo_color:  {augment.color_jitter: 0.1, augment.hed_jitter: 0.0}
+      geo_hed:    {augment.color_jitter: 0.0, augment.hed_jitter: 0.05}
+
+  - name: label_smoothing
+    concept: Soft targets reduce over-confidence of a large pretrained network.
+    expect: "Similar F1; changes validation log-loss (calibration)."
+    candidates:
+      "0.0": {train.label_smoothing: 0.0}
+      "0.1": {train.label_smoothing: 0.1}

@@ -1,0 +1,13 @@
+{
+  "id": "israrhilbi/crc-tissuenet-pathmnist",
+  "title": "CRC-TissueNet - PathMNIST",
+  "code_file": "../../notebooks/kaggle_crc_tissuenet.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": ["israrhilbi/pathmnist"],
+  "competition_sources": [],
+  "kernel_sources": []
+}

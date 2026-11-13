@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 bitsbyte111
+Copyright (c) 2026 Israr Hussain, Sumreen Fatima
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+The PathMNIST data (MedMNIST v2, NCT-CRC-HE-100K, CRC-VAL-HE-7K) are licensed
+separately under CC BY 4.0 and are not included in this repository.

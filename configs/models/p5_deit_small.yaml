@@ -1,0 +1,4 @@
+# P5 - Data-efficient vision transformer (22.1 M)
+_base_: transformer_base.yaml
+experiment: {name: P5_deit_small}
+model: {name: deit_small}

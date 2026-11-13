@@ -1,0 +1,7 @@
+# Kaggle notebook ("GPU T4 x2" or "GPU P100"; 4 vCPUs; ~29 GB RAM).
+# /kaggle/input is read-only, /kaggle/working is saved with the notebook version (20 GB cap).
+# Applied with:  --platform kaggle   (flat dotted keys, merged into every run's config)
+data.source_dirs: [/kaggle/input]   # searched recursively for your PathMNIST .npz / .npy files
+data.root: /kaggle/temp/crc_data    # scratch disk for the one-off memory-map cache (not saved)
+data.download: false                # you attach the data as a Kaggle dataset
+data.num_workers: 2                 # 4 vCPUs shared by up to 2 parallel runs
